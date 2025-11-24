@@ -1,5 +1,6 @@
-const fs = require('fs')
-const jsonData = fs.readFileSync('./serviceAccountKey.json')
+const fs = require("fs");
 
-const base64String = Buffer.from(jsonData, 'utf-8').toString('base64')
-console.log(base64String)
+const jsonString = fs.readFileSync("./serviceAccountKey.json", "utf-8");
+const base64String = Buffer.from(jsonString).toString("base64");
+
+console.log(base64String);

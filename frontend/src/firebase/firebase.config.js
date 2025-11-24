@@ -1,12 +1,12 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp } from "firebase/app";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_apiKey,
-  authDomain: import.meta.env.VITE_authDomain,
-  projectId: import.meta.env.VITE_projectId,
-  storageBucket: import.meta.env.VITE_storageBucket,
-  messagingSenderId: import.meta.env.VITE_messagingSenderId,
-  appId: import.meta.env.VITE_appId,
-}
+  apiKey: "AIzaSyAsVUsmCy3MC_Hk3xvJkFcPJpXk6yiAy48",
+  authDomain: "plantnet-a0757.firebaseapp.com",
+  projectId: "plantnet-a0757",
+  storageBucket: "plantnet-a0757.firebasestorage.app",
+  messagingSenderId: "679749336354",
+  appId: "1:679749336354:web:bfed07c7f4eac9391d797b",
+};
 
-export const app = initializeApp(firebaseConfig)
+export const app = initializeApp(firebaseConfig);
