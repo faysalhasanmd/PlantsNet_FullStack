@@ -1,19 +1,20 @@
 import { useForm } from "react-hook-form";
 import { imageUpload } from "../../utils";
 import useAuth from "../../hooks/useAuth";
-import axios from "axios";
 import { useMutation } from "@tanstack/react-query";
 import LoadingSpinner from "../Shared/LoadingSpinner";
 import ErrorPage from "../../pages/ErrorPage";
 import { TbFidgetSpinner } from "react-icons/tb";
 import toast from "react-hot-toast";
+import useAxiosSecure from "../../hooks/useAxiosSecure";
 
 const AddPlantForm = () => {
   const { user } = useAuth();
+  const axiosSecure = useAxiosSecure();
 
   const { isPending, isError, mutateAsync, reset } = useMutation({
     mutationFn: async (payload) => {
-      const res = await axios.post("http://localhost:3000/plants", payload);
+      const res = await axiosSecure.post("/plants", payload);
       return res;
     },
     onSuccess: (data) => {

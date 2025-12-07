@@ -53,8 +53,31 @@ async function run() {
     const db = client.db("PlantNetDB");
     const plantsCollections = db.collection("plants");
     const orderCollections = db.collection("orders");
+    const usersCollections = db.collection("users");
+    const sellerRequestCollections = db.collection("sellerRequests");
 
-    app.post("/plants", async (req, res) => {
+    // verifyAdmin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req?.tokenEmail;
+      const user = await usersCollections.findOne({ email });
+      if (!user || user?.role !== "admin")
+        return res
+          .status(403)
+          .send({ message: "admin only actions!", role: user?.role });
+      next();
+    };
+    // verifySeller
+    const verifySeller = async (req, res, next) => {
+      const email = req?.tokenEmail;
+      const user = await usersCollections.findOne({ email });
+      if (!user || user?.role !== "seller")
+        return res
+          .status(403)
+          .send({ message: "seller only actions!", role: user?.role });
+      next();
+    };
+
+    app.post("/plants", verifyJWT, verifySeller, async (req, res) => {
       const plantData = req.body;
       const result = await plantsCollections.insertOne(plantData);
       res.send(result);
@@ -130,27 +153,101 @@ async function run() {
         })
       );
     });
-    // --------------------------------------------------------------
-    app.get("/my-orders/:email", async (req, res) => {
-      const email = req.params.email;
-      const result = await orderCollections.find({ customer: email }).toArray();
+
+    app.get("/user/role", verifyJWT, async (req, res) => {
+      const result = await usersCollections.findOne({ email: req.tokenEmail });
+      res.send({ role: result.role });
+    });
+
+    app.post("/user", async (req, res) => {
+      const userData = req.body;
+      userData.create_at = new Date().toISOString();
+      userData.last_loggedIn = new Date().toISOString();
+      userData.role = "customer";
+      const query = {
+        email: userData.email,
+      };
+      const alreadyExist = await usersCollections.findOne(query);
+      console.log("user already exist -->", !!alreadyExist);
+
+      if (alreadyExist) {
+        console.log("update user information...");
+        const result = await usersCollections.updateOne(query, {
+          $set: {
+            last_loggedIn: new Date().toISOString(),
+          },
+        });
+        return res.send(result);
+      }
+      const result = await usersCollections.insertOne(userData);
       res.send(result);
     });
-    app.get("/manage-order/:email", async (req, res) => {
-      const email = req.params.email;
+
+    app.get("/my-orders", verifyJWT, async (req, res) => {
       const result = await orderCollections
-        .find({ "seller.email": email })
+        .find({ customer: req.tokenEmail })
         .toArray();
       res.send(result);
     });
-    app.get("/my-inventory/:email", async (req, res) => {
-      const email = req.params.email;
-      const result = await plantsCollections
-        .find({ "seller.email": email })
+    app.get(
+      "/manage-order/:email",
+      verifyJWT,
+      verifySeller,
+      async (req, res) => {
+        const email = req.params.email;
+        const result = await orderCollections
+          .find({ "seller.email": email })
+          .toArray();
+        res.send(result);
+      }
+    );
+    app.get(
+      "/my-inventory/:email",
+      verifyJWT,
+      verifySeller,
+      async (req, res) => {
+        const email = req.params.email;
+        const result = await plantsCollections
+          .find({ "seller.email": email })
+          .toArray();
+        res.send(result);
+      }
+    );
+
+    app.post("/become-seller", verifyJWT, async (req, res) => {
+      const email = req.tokenEmail;
+      const alreadyExist = await sellerRequestCollections.findOne({ email });
+      if (alreadyExist)
+        return res
+          .status(409)
+          .send({ message: "already requested please wait for it..?" });
+      const result = await sellerRequestCollections.insertOne({ email });
+      res.send(result);
+    });
+
+    app.get("/seller-requests", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await sellerRequestCollections.find().toArray();
+      res.send(result);
+    });
+    app.get("/users", verifyJWT, verifyJWT, verifyAdmin, async (req, res) => {
+      const adminEmail = req.tokenEmail;
+      const result = await usersCollections
+        .find({ email: { $ne: adminEmail } })
         .toArray();
       res.send(result);
     });
-    // ---------------------------------------------------------------
+
+    app.patch("/update-role", verifyJWT, verifyAdmin, async (req, res) => {
+      const { email, role } = req.body;
+      const result = await usersCollections.updateOne(
+        { email },
+        { $set: { role } }
+      );
+      await sellerRequestCollections.deleteOne({ email });
+      console.log(result);
+      res.send(result);
+    });
+
     app.get("/plants", async (req, res) => {
       const result = await plantsCollections.find().toArray();
       res.send(result);
